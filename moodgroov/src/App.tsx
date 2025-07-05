@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
-import Dashboard from './pages/Dashboard/Dashboard.js';
+import Dashboard from './pages/Dashboard';
 import './styles/global.css';
 
 const App: React.FC = () => (
