@@ -4,11 +4,31 @@ class YouTubeService {
   constructor() {
     this.apiKey = process.env.REACT_APP_YOUTUBE_API_KEY;
     this.baseUrl = 'https://www.googleapis.com/youtube/v3';
+
+    // Add fallback API key and logging for debugging
+    if (!this.apiKey) {
+      console.warn('YouTube API key not found in environment variables!');
+      // Fallback to a hardcoded key as a last resort
+      this.apiKey = 'AIzaSyC3qJZQKQicr47jb3Q_zFHhZLBEghD8gW8';
+    } else {
+      console.log('YouTube API key found:', this.apiKey.substring(0, 5) + '...');
+    }
   }
 
   // Search for videos
   async searchVideos(query, maxResults = 20) {
     try {
+      if (!query || !query.trim()) {
+        console.error('Empty search query provided');
+        return [];
+      }
+
+      if (!this.apiKey) {
+        console.error('No YouTube API key available');
+        return [];
+      }
+
+      console.log('Searching YouTube for:', query);
       const response = await axios.get(`${this.baseUrl}/search`, {
         params: {
           part: 'snippet',
@@ -21,6 +41,7 @@ class YouTubeService {
         }
       });
 
+      console.log('YouTube search results:', response.data.items?.length || 0);
       return response.data.items.map(item => ({
         id: item.id.videoId,
         title: item.snippet.title,
@@ -31,8 +52,9 @@ class YouTubeService {
         url: `https://www.youtube.com/watch?v=${item.id.videoId}`
       }));
     } catch (error) {
-      console.error('YouTube search error:', error);
-      throw error;
+      console.error('YouTube search error:', error.message);
+      console.error('Full error:', error);
+      return [];
     }
   }
 
