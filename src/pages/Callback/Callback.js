@@ -33,6 +33,9 @@ const Callback = () => {
         const user = await spotifyService.getCurrentUser();
         console.log('User authenticated:', user);
 
+        // Clear any previous auth state
+        localStorage.removeItem('spotify_auth_state');
+
         // Redirect to dashboard
         navigate('/dashboard');
       } catch (err) {
