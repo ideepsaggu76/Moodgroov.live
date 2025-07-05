@@ -5,7 +5,7 @@ const spotifyApi = new SpotifyWebApi();
 class SpotifyService {
   constructor() {
     this.clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-    this.clientSecret = process.env.REACT_APP_SPOTIFY_CLIENT_SECRET;
+    // Remove client secret from frontend - security risk
     this.redirectUri = process.env.REACT_APP_SPOTIFY_REDIRECT_URI;
     this.scopes = [
       'user-read-private',
@@ -25,7 +25,7 @@ class SpotifyService {
     ];
   }
 
-  // Generate Spotify authorization URL
+  // Generate Spotify authorization URL using implicit grant flow
   getAuthUrl() {
     const state = this.generateRandomString(16);
     localStorage.setItem('spotify_auth_state', state);
@@ -37,7 +37,7 @@ class SpotifyService {
     console.log('State:', state);
     
     const params = new URLSearchParams({
-      response_type: 'code',
+      response_type: 'token', // Use implicit grant flow instead of authorization code
       client_id: this.clientId,
       scope: this.scopes.join(' '),
       redirect_uri: this.redirectUri,
@@ -61,79 +61,30 @@ class SpotifyService {
     return result;
   }
 
-  // Exchange authorization code for access token
-  async getAccessToken(code, state) {
+  // Updated method to handle implicit grant flow
+  async handleCallback(hashParams) {
+    const { access_token, token_type, expires_in, state } = hashParams;
     const storedState = localStorage.getItem('spotify_auth_state');
     
     if (state !== storedState) {
       throw new Error('State mismatch');
     }
 
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(this.clientId + ':' + this.clientSecret)
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: this.redirectUri
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get access token');
+    if (!access_token) {
+      throw new Error('No access token received');
     }
 
-    const data = await response.json();
-    
     // Store tokens
-    localStorage.setItem('spotify_access_token', data.access_token);
-    localStorage.setItem('spotify_refresh_token', data.refresh_token);
-    localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in * 1000));
+    localStorage.setItem('spotify_access_token', access_token);
+    localStorage.setItem('spotify_token_expires', Date.now() + (expires_in * 1000));
     
     // Set access token for spotify API
-    spotifyApi.setAccessToken(data.access_token);
+    spotifyApi.setAccessToken(access_token);
     
-    return data;
+    return { access_token, token_type, expires_in };
   }
 
-  // Refresh access token
-  async refreshAccessToken() {
-    const refreshToken = localStorage.getItem('spotify_refresh_token');
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(this.clientId + ':' + this.clientSecret)
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to refresh access token');
-    }
-
-    const data = await response.json();
-    
-    localStorage.setItem('spotify_access_token', data.access_token);
-    localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in * 1000));
-    
-    spotifyApi.setAccessToken(data.access_token);
-    
-    return data;
-  }
-
-  // Check if token is valid and refresh if needed
+  // Check if token is valid
   async ensureValidToken() {
     const token = localStorage.getItem('spotify_access_token');
     const expires = localStorage.getItem('spotify_token_expires');
@@ -143,7 +94,8 @@ class SpotifyService {
     }
 
     if (expires && Date.now() > parseInt(expires)) {
-      await this.refreshAccessToken();
+      // Token expired, user needs to re-authenticate
+      throw new Error('Token expired, please login again');
     } else {
       spotifyApi.setAccessToken(token);
     }
