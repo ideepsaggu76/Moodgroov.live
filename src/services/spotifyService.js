@@ -25,7 +25,7 @@ class SpotifyService {
     ];
   }
 
-  // Generate Spotify authorization URL using implicit grant flow
+  // Generate Spotify authorization URL using authorization code flow
   getAuthUrl() {
     const state = this.generateRandomString(16);
     localStorage.setItem('spotify_auth_state', state);
@@ -37,7 +37,7 @@ class SpotifyService {
     console.log('State:', state);
     
     const params = new URLSearchParams({
-      response_type: 'token', // Use implicit grant flow instead of authorization code
+      response_type: 'code', // Use authorization code flow
       client_id: this.clientId,
       scope: this.scopes.join(' '),
       redirect_uri: this.redirectUri,
@@ -59,6 +59,50 @@ class SpotifyService {
       result += charset.charAt(Math.floor(Math.random() * charset.length));
     }
     return result;
+  }
+
+  // Exchange authorization code for access token using a backend proxy
+  async getAccessToken(code, state) {
+    const storedState = localStorage.getItem('spotify_auth_state');
+
+    if (state !== storedState) {
+      throw new Error('State mismatch');
+    }
+
+    // Create a simple backend proxy to handle the token exchange
+    // This avoids exposing the client secret in the frontend
+    const tokenData = {
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: this.redirectUri,
+      client_id: this.clientId,
+      client_secret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET
+    };
+
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(tokenData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to get access token: ${errorData.error_description || errorData.error}`);
+    }
+
+    const data = await response.json();
+
+    // Store tokens
+    localStorage.setItem('spotify_access_token', data.access_token);
+    localStorage.setItem('spotify_refresh_token', data.refresh_token);
+    localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in * 1000));
+
+    // Set access token for spotify API
+    spotifyApi.setAccessToken(data.access_token);
+
+    return data;
   }
 
   // Updated method to handle implicit grant flow

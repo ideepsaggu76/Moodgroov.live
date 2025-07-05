@@ -12,31 +12,22 @@ const Callback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Parse hash parameters from URL (implicit grant flow)
-        const hash = window.location.hash.substring(1);
-        const hashParams = new URLSearchParams(hash);
-
-        const access_token = hashParams.get('access_token');
-        const token_type = hashParams.get('token_type');
-        const expires_in = hashParams.get('expires_in');
-        const state = hashParams.get('state');
-        const error = hashParams.get('error');
+        // Parse query parameters from URL (authorization code flow)
+        const urlParams = new URLSearchParams(location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
 
         if (error) {
           throw new Error(`Spotify authorization error: ${error}`);
         }
 
-        if (!access_token) {
-          throw new Error('No access token received');
+        if (!code) {
+          throw new Error('No authorization code received');
         }
 
-        // Handle the callback with implicit grant flow
-        await spotifyService.handleCallback({
-          access_token,
-          token_type,
-          expires_in: parseInt(expires_in),
-          state
-        });
+        // Exchange code for access token
+        await spotifyService.getAccessToken(code, state);
 
         // Get user profile to verify authentication
         const user = await spotifyService.getCurrentUser();
