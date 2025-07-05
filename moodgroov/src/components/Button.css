@@ -1,0 +1,84 @@
+/* Button component styles */
+.button {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 500;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Button variants */
+.button.primary {
+  background: linear-gradient(90deg, #6200ee, #03dac6);
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.button.outlined {
+  background: transparent;
+  color: #6200ee;
+  border: 2px solid #6200ee;
+}
+
+/* Button sizes */
+.button.small {
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+}
+
+.button.medium {
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+}
+
+.button.large {
+  padding: 0.9rem 2rem;
+  font-size: 1.1rem;
+}
+
+/* Button states */
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+}
+
+.button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Animations */
+@keyframes button-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(98, 0, 238, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(98, 0, 238, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(98, 0, 238, 0);
+  }
+}
+
+.button.primary:focus {
+  animation: button-pulse 1.5s infinite;
+  outline: none;
+}
