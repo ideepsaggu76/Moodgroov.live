@@ -76,17 +76,32 @@ class YouTubeService {
     }
   }
 
+  // Get embed URL for YouTube player
+  getEmbedUrl(videoId, autoplay = false, controls = true) {
+    const params = new URLSearchParams({
+      enablejsapi: '1',
+      origin: window.location.origin,
+      autoplay: autoplay ? '1' : '0',
+      controls: controls ? '1' : '0',
+      rel: '0',
+      showinfo: '0',
+      modestbranding: '1'
+    });
+
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+  }
+
   // Get trending music videos
   async getTrendingMusic(maxResults = 20) {
     try {
       const response = await axios.get(`${this.baseUrl}/videos`, {
         params: {
-          part: 'snippet,statistics',
+          part: 'snippet,contentDetails,statistics',
           chart: 'mostPopular',
           videoCategoryId: '10', // Music category
+          regionCode: 'US',
           maxResults: maxResults,
-          key: this.apiKey,
-          regionCode: 'US'
+          key: this.apiKey
         }
       });
 
@@ -98,12 +113,11 @@ class YouTubeService {
         channelTitle: item.snippet.channelTitle,
         publishedAt: item.snippet.publishedAt,
         viewCount: item.statistics.viewCount,
-        likeCount: item.statistics.likeCount,
         url: `https://www.youtube.com/watch?v=${item.id}`
       }));
     } catch (error) {
-      console.error('YouTube trending error:', error);
-      throw error;
+      console.error('YouTube trending music error:', error);
+      return [];
     }
   }
 
@@ -194,19 +208,6 @@ class YouTubeService {
     formatted += seconds ? seconds.padStart(2, '0') : '00';
 
     return formatted;
-  }
-
-  // Create YouTube embed URL
-  getEmbedUrl(videoId, autoplay = false, controls = true) {
-    const params = new URLSearchParams({
-      autoplay: autoplay ? '1' : '0',
-      controls: controls ? '1' : '0',
-      rel: '0',
-      showinfo: '0',
-      modestbranding: '1'
-    });
-
-    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   }
 }
 

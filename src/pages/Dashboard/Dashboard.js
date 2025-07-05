@@ -13,7 +13,7 @@ const Dashboard = () => {
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [topTracks, setTopTracks] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(null);
-  const [, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -24,9 +24,39 @@ const Dashboard = () => {
   const [trendingMusic, setTrendingMusic] = useState([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [playlistTracks, setPlaylistTracks] = useState([]);
-  
+  const [youtubePlayer, setYoutubePlayer] = useState(null);
+  const [playerState, setPlayerState] = useState(-1); // -1: unstarted, 0: ended, 1: playing, 2: paused
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(50);
+
   const navigate = useNavigate();
   const youtubePlayerRef = useRef(null);
+
+  // Initialize YouTube Player API
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      window.onYouTubeIframeAPIReady = () => {
+        console.log('YouTube API ready');
+      };
+    }
+  }, []);
+
+  // Update current time while playing
+  useEffect(() => {
+    let interval;
+    if (youtubePlayer && playerState === 1) {
+      interval = setInterval(() => {
+        setCurrentTime(youtubePlayer.getCurrentTime());
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [youtubePlayer, playerState]);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -90,14 +120,77 @@ const Dashboard = () => {
     }
   };
 
+  const playYouTubeVideo = (video) => {
+    setCurrentYouTubeVideo(video);
+    setCurrentTrack(null);
+    setCurrentWallpaper(video.thumbnail);
+
+    // Initialize YouTube player if not already done
+    if (window.YT && window.YT.Player) {
+      if (youtubePlayer) {
+        youtubePlayer.loadVideoById(video.id);
+      } else {
+        const player = new window.YT.Player('youtube-player', {
+          height: '0',
+          width: '0',
+          videoId: video.id,
+          events: {
+            onReady: (event) => {
+              setYoutubePlayer(event.target);
+              setDuration(event.target.getDuration());
+              setVolume(event.target.getVolume());
+            },
+            onStateChange: (event) => {
+              setPlayerState(event.data);
+              setIsPlaying(event.data === 1);
+            }
+          },
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            rel: 0,
+            showinfo: 0,
+            modestbranding: 1
+          }
+        });
+        setYoutubePlayer(player);
+      }
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (youtubePlayer) {
+      if (playerState === 1) {
+        youtubePlayer.pauseVideo();
+      } else {
+        youtubePlayer.playVideo();
+      }
+    }
+  };
+
+  const seekTo = (seconds) => {
+    if (youtubePlayer) {
+      youtubePlayer.seekTo(seconds);
+    }
+  };
+
+  const setPlayerVolume = (vol) => {
+    if (youtubePlayer) {
+      youtubePlayer.setVolume(vol);
+      setVolume(vol);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const playTrack = async (track, isYouTube = false) => {
     try {
       if (isYouTube) {
-        setCurrentYouTubeVideo(track);
-        setCurrentTrack(null);
-        
-        // Set wallpaper to video thumbnail
-        setCurrentWallpaper(track.thumbnail);
+        playYouTubeVideo(track);
       } else {
         setCurrentTrack(track);
         setCurrentYouTubeVideo(null);
@@ -182,25 +275,25 @@ const Dashboard = () => {
         <ul className="nav-menu">
           <li className={currentView === 'home' ? 'active' : ''}>
             <button onClick={() => setCurrentView('home')}>
-              <span className="nav-icon">🏠</span>
+              <span className="nav-icon home-icon-3d"></span>
               Home
             </button>
           </li>
           <li className={currentView === 'search' ? 'active' : ''}>
             <button onClick={() => setCurrentView('search')}>
-              <span className="nav-icon">🔍</span>
+              <span className="nav-icon search-icon-3d"></span>
               Search
             </button>
           </li>
           <li>
             <button onClick={() => setShowCreatePlaylist(true)}>
-              <span className="nav-icon">➕</span>
+              <span className="nav-icon add-icon-3d"></span>
               Create Playlist
             </button>
           </li>
           <li>
             <button onClick={logout}>
-              <span className="nav-icon">🚪</span>
+              <span className="nav-icon logout-icon-3d"></span>
               Logout
             </button>
           </li>
@@ -238,7 +331,7 @@ const Dashboard = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
             <button onClick={handleSearch} className="search-btn">
-              🔍
+              <span className="search-icon-3d"></span>
             </button>
           </div>
         </div>
@@ -410,9 +503,9 @@ const Dashboard = () => {
             {currentTrack && (
               <>
                 {currentTrack.album?.images?.[0] && (
-                  <img src={currentTrack.album.images[0].url} alt={currentTrack.name} />
+                  <img src={currentTrack.album.images[0].url} alt={currentTrack.name} className="player-artwork" />
                 )}
-                <div>
+                <div className="track-details">
                   <h4>{currentTrack.name}</h4>
                   <p>{currentTrack.artists.map(a => a.name).join(', ')}</p>
                 </div>
@@ -420,8 +513,8 @@ const Dashboard = () => {
             )}
             {currentYouTubeVideo && (
               <>
-                <img src={currentYouTubeVideo.thumbnail} alt={currentYouTubeVideo.title} />
-                <div>
+                <img src={currentYouTubeVideo.thumbnail} alt={currentYouTubeVideo.title} className="player-artwork" />
+                <div className="track-details">
                   <h4>{currentYouTubeVideo.title}</h4>
                   <p>{currentYouTubeVideo.channelTitle}</p>
                 </div>
@@ -430,15 +523,48 @@ const Dashboard = () => {
           </div>
           
           {currentYouTubeVideo && (
-            <div className="youtube-player">
-              <iframe
-                ref={youtubePlayerRef}
-                src={youtubeService.getEmbedUrl(currentYouTubeVideo.id, true, true)}
-                title={currentYouTubeVideo.title}
-                frameBorder="0"
-                allowFullScreen
-              />
-            </div>
+            <>
+              <div className="player-controls">
+                <button onClick={togglePlayPause} className="play-pause-btn">
+                  <span className={playerState === 1 ? "pause-icon-3d" : "play-icon-3d"}></span>
+                </button>
+
+                <div className="progress-container">
+                  <span className="time-display">{formatTime(currentTime)}</span>
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                    ></div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={duration || 100}
+                      value={currentTime}
+                      onChange={(e) => seekTo(parseFloat(e.target.value))}
+                      className="progress-slider"
+                    />
+                  </div>
+                  <span className="time-display">{formatTime(duration)}</span>
+                </div>
+
+                <div className="volume-control">
+                  <span className="volume-icon-3d"></span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volume}
+                    onChange={(e) => setPlayerVolume(parseInt(e.target.value))}
+                    className="volume-slider"
+                  />
+                </div>
+              </div>
+
+              <div className="youtube-player-container">
+                <div id="youtube-player"></div>
+              </div>
+            </>
           )}
         </div>
       )}
