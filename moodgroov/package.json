@@ -21,7 +21,7 @@
   },
   "scripts": {
     "start": "serve -s build",
-    "build": "react-scripts build",
+    "build": "ls -la src && ls -la src/pages && ls -la src/pages/Dashboard && react-scripts build",
     "dev": "react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
