@@ -21,11 +21,11 @@
   },
   "scripts": {
     "start": "serve -s build",
-    "build": "ls -la src && ls -la src/pages && ls -la src/pages/Dashboard && react-scripts build",
+    "build": "react-scripts build",
     "dev": "react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "heroku-postbuild": "npm run build"
+    "heroku-postbuild": "echo Skip build on Heroku"
   },
   "eslintConfig": {
     "extends": [
@@ -49,5 +49,5 @@
       "last 1 safari version"
     ]
   },
-  "heroku-run-build-script": true
+  "heroku-run-build-script": false
 }
